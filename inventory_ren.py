@@ -1,29 +1,26 @@
-from dataclasses import dataclass
+#type:ignore
+"""renpy
+init python early:
+"""
+
 from itertools import islice
-from .item import Item
+
+from inventory import ItemGlossary
+from inventory.exception import InventoryOverflowError, InventoryDeleteError
 
 
-class InventoryError(Exception):
-    pass
 
-class InventoryOverflowError(InventoryError):
-    pass
-
-class InventoryDeleteError(InventoryError):
-    pass
+with renpy.file("inventory/items.json") as items_file:
+    Items = ItemGlossary.from_file(items_file)
+renpy.const(Items)
 
 
-@dataclass
-class InventoryCell:
-    item: Item
-    qty: int
-    # position: int
 
-
-class Inventory:
+class Inventory(renpy.store.object):
     def __init__(self, size: int) -> None:
+        self.testflag = True
         self._size: int = size
-        self._data: dict[int, InventoryCell] = {}
+        self._data: dict[int, int] = {}
         self._items_qty: int = 0
 
     @property
@@ -47,13 +44,12 @@ class Inventory:
     def has_item(self, item_id: int) -> bool:
         return item_id in self._data
     
-    def add_item(self, item: Item, qty: int = 1) -> None:
-        if item.id in self._data:
-            # self.update_qty(item, qty)
+    def add_item(self, item_id: int) -> None:
+        if item_id in self._data:
             return
         if self._items_qty >= self._size:
-            raise InventoryOverflowError(f'Cant add item. Id: {item.id}') 
-        self._data[item.id] = InventoryCell(item, qty)
+            raise InventoryOverflowError(f'Cant add item. Id: {item_id}') 
+        self._data[item_id] = 1
         self._items_qty += 1
         return
     
@@ -64,12 +60,12 @@ class Inventory:
     def del_item(self, item_id: int) -> None:
         if not item_id in self._data:
             raise InventoryDeleteError(f'No such item in inventory. Id: {item_id}')
-        self._data.pop(item_id)
+        del self._data[item_id]
         self._items_qty -= 1
         return
 
     def list_items(self, chunk_size: int = 1) -> list:
-        items = (c.item for c in self._data.values())
+        items = (Items.get(iid) for iid in self._data.keys())
         if chunk_size == 1:
             return list(items)
         result = []

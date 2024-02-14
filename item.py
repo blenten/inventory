@@ -1,9 +1,6 @@
 from dataclasses import dataclass
 import json
-
-
-class ItemIdError(Exception):
-    pass
+from .exception import ItemIdError
 
 
 @dataclass(frozen=True)
