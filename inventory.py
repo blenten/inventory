@@ -1,25 +1,11 @@
-#type:ignore
-"""renpy
-init python early:
-"""
+# type:ignore
+import renpy.exports as renpy
+
 
 from itertools import islice
+from typing import Union
 
-from inventory import ItemGlossary, Item
-from inventory.exception import InventoryOverflowError, InventoryDeleteError
-
-
-
-with renpy.file("inventory/items.json") as items_file:
-    Items = ItemGlossary.from_file(items_file)
-# TMP
-# it = {}
-# for i in Items._items.values():
-#     it[i.id + 3] = Item(i.id + 3, i.name, i.description, i.pic)
-# Items._items.update(it)
-# del it
-# /TMP
-renpy.const(Items)
+from .exception import InventoryOverflowError, InventoryDeleteError
 
 
 
@@ -44,7 +30,7 @@ class Inventory(renpy.store.object):
     def is_empty(self) -> bool:
         return self._items_qty == 0
     
-    def clear(self):
+    def clear(self) -> None:
         self._data.clear()
         self._items_qty = 0
     
@@ -61,7 +47,7 @@ class Inventory(renpy.store.object):
         return
     
     def remove_item(self, item_id: int) -> None:
-        # placeholder for qty management later
+        # placeholder for qty management
         self.del_item(item_id)
     
     def del_item(self, item_id: int) -> None:
@@ -71,11 +57,12 @@ class Inventory(renpy.store.object):
         self._items_qty -= 1
         return
 
-    def list_items(self, chunk_size: int = 1) -> list:
-        items = (Items.get(iid) for iid in self._data.keys())
+    def list_items(self, chunk_size: int = 1) -> Union[tuple, list]:
+        # renpy hangs and leaks memory if iter() is used. this solves the problem somehow
+        items = (iid for iid in self._data.keys())
         if chunk_size == 1:
-            return list(items)
+            return tuple(self._data.keys())
         result = []
-        while chunk := list(islice(items, chunk_size)):
+        while chunk := tuple(islice(items, chunk_size)):
             result.append(chunk)
         return result

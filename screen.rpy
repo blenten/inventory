@@ -3,6 +3,7 @@ init python in inv_screen:
     craft_area = CraftArea()
     drag_pos = PosManager()
 
+
     def return_func():
         craft_area.clear()
         return True
@@ -27,11 +28,13 @@ screen hud():
             action Call("_show_inventory_screen", from_current=True)
 
 
+
 label _show_inventory_screen:
     hide screen hud
     call screen inventory_screen
     show screen hud
     $ renpy.block_rollback()
+
 
 
 screen inventory_screen():
@@ -41,16 +44,34 @@ screen inventory_screen():
 
     add "inventory/bg.png"
 
+
     imagebutton auto "inventory/close_button_%s.png":
         focus_mask True
         action Function(inv_screen.return_func)
         # action Return()
 
+
+    button:
+        style "inventory_craftbutton"
+        action Function(inv_screen.craft_area.craft)
+        hovered SetScreenVariable("craftbutton_hovered", True)
+        unhovered SetScreenVariable("craftbutton_hovered", False)
+        default craftbutton_hovered = False
+
+        if craftbutton_hovered:
+            text "CROooOFT" style "inventory_craftbutton_text":
+                outlines [(3, "#ffefc5", 0, 0)]
+                color "#000000"
+        else:
+            text "CROOFT" style "inventory_craftbutton_text"
+
+
     draggroup:
         id "items_draggroup"
         style_suffix "items_area"
+
         for row in inventory.list_items(inv_screen.ITEMS_AREA_ROW_LEN):
-            for item in row:
+            for item in as_items(row):
                 drag:
                     drag_name item.id
                     tooltip item.description
@@ -78,17 +99,4 @@ screen inventory_screen():
                 yfill True
                 # background "#00FF00"
 
-    button:
-        style "inventory_craftbutton"
-        action Function(inv_screen.craft_area.craft)
-        hovered SetScreenVariable("craftbutton_hovered", True)
-        unhovered SetScreenVariable("craftbutton_hovered", False)
-        default craftbutton_hovered = False
-
-        if craftbutton_hovered:
-            text "CROooOFT" style "inventory_craftbutton_text":
-                outlines [(3, "#ffefc5", 0, 0)]
-                color "#000000"
-        else:
-            text "CROOFT" style "inventory_craftbutton_text"            
 

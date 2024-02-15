@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 import json
+from typing import Union
+
 from .exception import ItemIdError
 
 
@@ -41,7 +43,7 @@ class ItemGlossary:
     def get_list(self) -> list[Item]:
         return self._items.values()
     
-    def craft(self, *item_ids: list[int]):
+    def craft(self, *item_ids: list[int]) -> Union[Item, None]:
         key = '+'.join(map(str, sorted(item_ids)))
         return self._craft_recipies.get(key, None)
     
