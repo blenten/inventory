@@ -2,6 +2,7 @@ init python in inv_screen:
 
     craft_area = CraftArea()
     drag_pos = PosManager()
+    craft_occured = False
 
 
     def return_func():
@@ -17,7 +18,7 @@ init python in inv_screen:
         dragged[0].snap(*drag_pos.get(dragged[0].drag_name))
         craft_area.remove(dragged[0].drag_name)
 
-    
+
 
 screen hud():
     modal False
@@ -33,7 +34,11 @@ label _show_inventory_screen:
     hide screen hud
     call screen inventory_screen
     show screen hud
-    $ renpy.block_rollback()
+    if inv_screen.craft_occured:
+        # Because rollback is broken i need to block it after crafting an item
+        # Maybe will fix later by implementing custom rollback for inventory
+        $ renpy.block_rollback()
+    return
 
 
 
@@ -87,7 +92,7 @@ screen inventory_screen():
                             align (0.5, 0.5)
                             fit "contain"
                         text "[item.name]" style "inventory_item_cell_text"
-        
+
         drag:
             drag_name "craft_drop"
             draggable False

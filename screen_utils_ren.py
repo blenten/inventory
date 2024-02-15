@@ -35,7 +35,7 @@ class CraftArea:
 
     def __init__(self):
         self.data = {}
-    
+
 
     def clear(self):
         self.data.clear()
@@ -53,7 +53,7 @@ class CraftArea:
         if item_id in self.data:
             self.data[item_id] += 1
             return
-        self.data[item_id] = 1 
+        self.data[item_id] = 1
 
 
     def remove(self, item_id):
@@ -70,7 +70,9 @@ class CraftArea:
         if res_item is None:
             self.return_drags()
             return None
-        
+
+        global craft_occured
+        craft_occured = True
         for r in sorted(self.data.keys(), reverse=True):
             renpy.store.inventory.remove_item(r)
             drag_pos.remove(r, False)
