@@ -1,7 +1,11 @@
-define inv_screen.CRAFT_BORDER = 155
+init python early in inv_screen:
 
-define inv_screen.ITEMS_AREA_ROW_LEN = 4
-define inv_screen.ITEMS_AREA_SIZE = inv_screen.square(652)
+    CRAFT_BORDER = 155
+    ITEMS_AREA_ROW_LEN = 4
+
+    ITEMS_AREA_SIZE = square(652)
+
+
 
 style inventory_items_area:
     pos (285, 220)

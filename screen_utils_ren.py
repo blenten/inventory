@@ -20,6 +20,15 @@ def square(side):
 def tuple_sort_key(t):
     return t[1] * renpy.config.screen_width + t[0]
 
+@renpy.pure
+def init_positions() -> list:
+    delta = ITEMS_AREA_SIZE[0] / ITEMS_AREA_ROW_LEN
+    result = []
+    for dy in range(0, int(ITEMS_AREA_SIZE[0] / delta)):
+        for dx in range(0, ITEMS_AREA_ROW_LEN):
+            result.append((int(dx * delta), int(dy * delta)))
+    return result
+
 
 
 class CraftArea:
@@ -36,7 +45,7 @@ class CraftArea:
         idg = renpy.get_displayable("inventory_screen", "items_draggroup")
         for dname in self.data.keys():
             if d := idg.get_child_by_name(dname):
-                d.snap(*pos_stack.get(dname))
+                d.snap(*drag_pos.get(dname))
         self.clear()
 
 
@@ -64,34 +73,37 @@ class CraftArea:
         
         for r in sorted(self.data.keys(), reverse=True):
             renpy.store.inventory.remove_item(r)
-            pos_stack.remove(r)
+            drag_pos.remove(r, False)
         self.clear()
 
         renpy.store.inventory.add_item(res_item.id)
-        pos_stack.assign(res_item.id)
-        pos_stack.sort()
+        drag_pos.assign(res_item.id)
+        drag_pos.sort_and_compress()
 
 
-class PositionStack:
+
+class PosManager:
     def __init__(self):
+        self.positions = tuple(init_positions())
         self.assigned = {}
-        self.pos_stack = deque()
 
-    def add_pos(self, pos: tuple):
-        self.pos_stack.appendleft(pos)
-    
+    def get(self, item_id):
+        if not item_id in self.assigned:
+            self.assign(item_id)
+        return self.positions[self.assigned[item_id]]
+
     def assign(self, item_id):
         if item_id in self.assigned:
             return
-        self.assigned[item_id] = self.pos_stack.pop()
+        self.assigned[item_id] = len(self.assigned)
 
-    def remove(self, item_id):
+    def remove(self, item_id, compress=True):
         if not item_id in self.assigned:
             return
-        self.pos_stack.append(self.assigned.pop(item_id))
+        del self.assigned[item_id]
+        if compress:
+            self.sort_and_compress()
 
-    def get(self, item_id) -> tuple:
-        if item_id in self.assigned:
-            return self.assigned[item_id]
-        self.assign(item_id)
-        return self.assigned[item_id]
+    def sort_and_compress(self):
+        for pos_idx, iid in enumerate(sorted(self.assigned.keys())):
+            self.assigned[iid] = pos_idx
