@@ -11,8 +11,14 @@ from renpy.store import Items
 
 @renpy.pure
 def square(side):
-    ratio = renpy.config.screen_height / renpy.config.screen_width
-    return (side * ratio, side)
+    if isinstance(side, float):
+        ratio = renpy.config.screen_height / renpy.config.screen_width
+        return (side * ratio, side)
+    return (side, side)
+
+@renpy.pure
+def tuple_sort_key(t):
+    return t[1] * renpy.config.screen_width + t[0]
 
 
 
@@ -30,7 +36,7 @@ class CraftArea:
         idg = renpy.get_displayable("inventory_screen", "items_draggroup")
         for dname in self.data.keys():
             if d := idg.get_child_by_name(dname):
-                d.snap(*drag_start[dname])
+                d.snap(*pos_stack.get(dname))
         self.clear()
 
 
@@ -56,16 +62,17 @@ class CraftArea:
             self.return_drags()
             return None
         
-        for r in self.data.keys():
+        for r in sorted(self.data.keys(), reverse=True):
             renpy.store.inventory.remove_item(r)
-        renpy.store.inventory.add_item(res_item.id)
-
+            pos_stack.remove(r)
         self.clear()
-        drag_start.clear()
+
+        renpy.store.inventory.add_item(res_item.id)
+        pos_stack.assign(res_item.id)
+        pos_stack.sort()
 
 
-
-class Position:
+class PositionStack:
     def __init__(self):
         self.assigned = {}
         self.pos_stack = deque()

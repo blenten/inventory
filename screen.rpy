@@ -1,29 +1,33 @@
 init python in inv_screen:
 
-    drag_start = {}
     craft_area = CraftArea()
+    pos_stack = None
 
+    def init_pos():
+        global pos_stack
+        if pos_stack is not None:
+            return
+        pos_stack = PositionStack()
+        delta = ITEMS_AREA_SIZE[0] / ITEMS_AREA_ROW_LEN
+        for dy in range(0, int(ITEMS_AREA_SIZE[0] / delta)):
+            for dx in range(0, ITEMS_AREA_ROW_LEN):
+                pos_stack.add_pos((int(dx * delta), int(dy * delta)))
+
+    
     def return_func():
-        drag_start.clear()
         craft_area.clear()
         return True
 
-    def item_activated_func(dragged):
-        iid = dragged[0].drag_name
-        if iid in drag_start:
-            return
-        drag_start[iid] = (dragged[0].x, dragged[0].y)
-
     def item_drugged_func(dragged, dropped_on):
+        global pos_stack
         if dropped_on:
             if dropped_on.drag_name == "craft_drop":
                 craft_area.add(dragged[0].drag_name)
                 return
-        dragged[0].snap(*drag_start[dragged[0].drag_name])
+        dragged[0].snap(*pos_stack.get(dragged[0].drag_name))
         craft_area.remove(dragged[0].drag_name)
 
-
-
+    
 
 screen hud():
     modal False
@@ -36,6 +40,7 @@ screen hud():
 
 label _show_inventory_screen:
     hide screen hud
+    $ inv_screen.init_pos()
     call screen inventory_screen
     show screen hud
     $ renpy.block_rollback()
@@ -56,16 +61,16 @@ screen inventory_screen():
     draggroup:
         id "items_draggroup"
         style_suffix "items_area"
-        for yn, row in enumerate(inventory.list_items(4)):
-            for xn, item in enumerate(row):
+        for row in inventory.list_items(inv_screen.ITEMS_AREA_ROW_LEN):
+            for item in row:
+                $ inv_screen.pos_stack.assign(item.id)
                 drag:
                     drag_name item.id
                     tooltip item.description
                     drag_offscreen True
                     drag_raise True
-                    pos (float(xn), float(yn))
+                    pos inv_screen.pos_stack.get(item.id)
                     xysize (0.25, 0.25)
-                    activated inv_screen.item_activated_func
                     dragged inv_screen.item_drugged_func
 
                     frame:

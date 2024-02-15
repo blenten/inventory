@@ -5,13 +5,20 @@ init python early:
 
 from itertools import islice
 
-from inventory import ItemGlossary
+from inventory import ItemGlossary, Item
 from inventory.exception import InventoryOverflowError, InventoryDeleteError
 
 
 
 with renpy.file("inventory/items.json") as items_file:
     Items = ItemGlossary.from_file(items_file)
+# TMP
+# it = {}
+# for i in Items._items.values():
+#     it[i.id + 3] = Item(i.id + 3, i.name, i.description, i.pic)
+# Items._items.update(it)
+# del it
+# /TMP
 renpy.const(Items)
 
 

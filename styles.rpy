@@ -1,9 +1,11 @@
-define inv_screen.INVENTORY_ROW_LEN = 4
 define inv_screen.CRAFT_BORDER = 155
+
+define inv_screen.ITEMS_AREA_ROW_LEN = 4
+define inv_screen.ITEMS_AREA_SIZE = inv_screen.square(652)
 
 style inventory_items_area:
     pos (285, 220)
-    xysize inv_screen.square(0.603)
+    xysize inv_screen.ITEMS_AREA_SIZE
 
 style inventory_item_cell is empty:
     # background "#0000FF"
