@@ -44,18 +44,17 @@ class Inventory(RevertableObject):
             raise InventoryOverflowError(f'Cant add item. Id: {item_id}')
         self._data[item_id] = 1
         self._items_qty += 1
-        return
 
     def remove_item(self, item_id: int) -> None:
         # placeholder for qty management
         self.del_item(item_id)
 
     def del_item(self, item_id: int) -> None:
-        if not item_id in self._data:
-            raise InventoryDeleteError(f'No such item in inventory. Id: {item_id}')
-        del self._data[item_id]
-        self._items_qty -= 1
-        return
+        try:
+            del self._data[item_id]
+            self._items_qty -= 1
+        except KeyError:
+            raise InventoryDeleteError(f'No item with id: {item_id} in inventory')
 
     def list_items(self, chunk_size: int = 1) -> Union[tuple, list]:
         # renpy hangs and leaks memory if iter() is used. this solves the problem somehow

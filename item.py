@@ -21,7 +21,7 @@ class ItemGlossary:
     def __init__(self) -> None:
         self._items = {}
         self._craft_recipies = {}
-    
+
     @classmethod
     def from_file(cls, item_file):
         res = cls()
@@ -34,17 +34,16 @@ class ItemGlossary:
         for key, res_id in item_data['craft_recepies'].items():
             self._craft_recipies[key] = self.get(res_id)
 
-    def get(self, id: int) -> Item:
+    def get(self, iid: int) -> Item:
         try:
-            return self._items[id]   
+            return self._items[iid]
         except KeyError:
-            raise ItemIdError
-        
+            raise ItemIdError(f'No item with id: {iid}')
+
     def get_list(self) -> list[Item]:
         return self._items.values()
-    
+
     def craft(self, *item_ids: list[int]) -> Union[Item, None]:
         key = '+'.join(map(str, sorted(item_ids)))
         return self._craft_recipies.get(key, None)
-    
-    
+

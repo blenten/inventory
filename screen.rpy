@@ -2,12 +2,17 @@ init python in inv_screen:
 
     craft_area = CraftArea()
     drag_pos = PosManager()
-    craft_occured = False
+
+    def reset():
+        craft_area.clear()
+        drag_pos.clear()
+        InvUpdBuilder.clear()
 
 
     def return_func():
-        craft_area.clear()
-        return True
+        upd = InvUpdBuilder.build()
+        return upd if upd is not None else False
+
 
     def item_drugged_func(dragged, dropped_on):
         global drag_pos
@@ -17,6 +22,7 @@ init python in inv_screen:
                 return
         dragged[0].snap(*drag_pos.get(dragged[0].drag_name))
         craft_area.remove(dragged[0].drag_name)
+
 
 
 
@@ -32,12 +38,36 @@ screen hud():
 
 label _show_inventory_screen:
     hide screen hud
+    $ inv_screen.reset()
     call screen inventory_screen
     show screen hud
-    if inv_screen.craft_occured:
-        # Because rollback is broken i need to block it after crafting an item
-        # Maybe will fix later by implementing custom rollback for inventory
-        $ renpy.block_rollback()
+    if isinstance(_return, inv.InventoryUpdate):
+        $ renpy.suspend_rollback(True)
+        jump _craft_occured
+        $ renpy.suspend_rollback(False)
+    return
+
+label _craft_occured:
+    python:
+        upd = _return
+
+        if (renpy.in_rollback()
+            and isinstance(renpy.roll_forward_info(), inv.InventoryUpdate)):
+
+            upd = renpy.roll_forward_info()
+
+            try:
+                for r in upd.remove:
+                    renpy.store.inventory.remove_item(r)
+
+            except inv.InventoryDeleteError:    # for rare bug
+                del renpy.game.log.forward[-1]
+                renpy.return_statement()
+
+            for a in upd.add:
+                renpy.store.inventory.add_item(a)
+
+        renpy.checkpoint(upd, hard=False)
     return
 
 

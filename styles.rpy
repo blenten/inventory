@@ -1,4 +1,4 @@
-init python early in inv_screen:
+init 2 python early in inv_screen:
 
     CRAFT_BORDER = 155
     ITEMS_AREA_ROW_LEN = 4

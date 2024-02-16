@@ -1,12 +1,10 @@
-class InventoryError(Exception):
-    pass
+class InventoryError(Exception):...
 
-class InventoryOverflowError(InventoryError):
-    pass
+class InventoryOverflowError(InventoryError):...
 
-class InventoryDeleteError(InventoryError):
-    pass
+class InventoryDeleteError(InventoryError):...
+
+class InventoryUpdateError(InventoryError): ...
 
 
-class ItemIdError(Exception):
-    pass
+class ItemIdError(InventoryError):...

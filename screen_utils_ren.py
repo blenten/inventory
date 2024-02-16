@@ -1,11 +1,9 @@
 #type:ignore
 """renpy
-init python early in inv_screen:
+init 1 python early in inv_screen:
 """
 
-from collections import deque
-
-from renpy.store import Items
+from renpy.store import Items, InvUpdBuilder
 
 
 
@@ -71,14 +69,15 @@ class CraftArea:
             self.return_drags()
             return None
 
-        global craft_occured
-        craft_occured = True
-        for r in sorted(self.data.keys(), reverse=True):
+        for r in self.data.keys():
             renpy.store.inventory.remove_item(r)
+            InvUpdBuilder.remove(r)
             drag_pos.remove(r, False)
         self.clear()
 
         renpy.store.inventory.add_item(res_item.id)
+        InvUpdBuilder.add(res_item.id)
+
         drag_pos.assign(res_item.id)
         drag_pos.sort_and_compress()
 
@@ -109,3 +108,6 @@ class PosManager:
     def sort_and_compress(self):
         for pos_idx, iid in enumerate(sorted(self.assigned.keys())):
             self.assigned[iid] = pos_idx
+
+    def clear(self):
+        self.assigned.clear()
