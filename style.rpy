@@ -1,9 +1,14 @@
 init 2 python early in inv_screen:
 
-    CRAFT_BORDER = 155
     ITEMS_AREA_ROW_LEN = 4
+    ITEMS_AREA_SIZE    = square(652)
 
-    ITEMS_AREA_SIZE = square(652)
+    IMG_BG           = "inventory/bg.png"
+    IMG_BUTTON_CLOSE = "inventory/close_button_%s.png"
+    IMG_BUTTON_HUD   = "inventory/hud_button_%s.png"
+
+    CRAFT_BORDER = 155
+
 
 
 

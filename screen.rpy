@@ -9,7 +9,7 @@ init python in inv_screen:
         InvUpdBuilder.clear()
 
 
-    def return_func():
+    def return_():
         upd = InvUpdBuilder.build()
         return upd if upd is not None else False
 
@@ -30,7 +30,7 @@ screen hud():
     modal False
 
     showif renpy.get_screen("choice") is None:
-        imagebutton auto "inventory/hud_button_%s.png":
+        imagebutton auto inv_screen.IMG_BUTTON_HUD:
             focus_mask True
             action Call("_show_inventory_screen", from_current=True)
 
@@ -77,13 +77,12 @@ screen inventory_screen():
     roll_forward True
     style_prefix "inventory"
 
-    add "inventory/bg.png"
+    add inv_screen.IMG_BG
 
 
-    imagebutton auto "inventory/close_button_%s.png":
+    imagebutton auto inv_screen.IMG_BUTTON_CLOSE:
         focus_mask True
-        action Function(inv_screen.return_func)
-        # action Return()
+        action Function(inv_screen.return_)
 
 
     button:

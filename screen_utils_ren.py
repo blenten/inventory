@@ -14,9 +14,6 @@ def square(side):
         return (side * ratio, side)
     return (side, side)
 
-@renpy.pure
-def tuple_sort_key(t):
-    return t[1] * renpy.config.screen_width + t[0]
 
 @renpy.pure
 def init_positions() -> list:
