@@ -1,4 +1,4 @@
-init 2 python early in inv_screen:
+init 1 python early in inv_screen:
 
     ITEMS_AREA_ROW_LEN = 4
     ITEMS_AREA_SIZE    = square(652)

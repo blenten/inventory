@@ -1,42 +1,37 @@
-from collections import defaultdict, namedtuple
-from typing import Union
+from typing import NewType
 
 from .inventory import Inventory
-from .exception import InventoryUpdateError
+
+
+_UpdID = NewType('_UpdID', int)
+_UPD_ID = 0
+
+
+def _upd_id() -> _UpdID:
+    global _UPD_ID
+    _UPD_ID += 1
+    return _UpdID(_UPD_ID)
 
 
 
-InventoryUpdate = namedtuple('InventoryUpdate', 'add remove')
+
+class InventoryState(tuple):
+
+    def __new__(cls, inv: Inventory):
+        global _UPD_STORE
+        return super().__new__(cls, (_upd_id(), tuple(inv._data.keys())))
 
 
-class UpdateBuilder:
+    @property
+    def upd_id(self) -> _UpdID:
+        return self[0]
 
-    def __init__(self) -> None:
-        self.transaction = defaultdict(int)
-
-
-    def add(self, item_id: int) -> None:
-        self.transaction[item_id] += 1
-
-    def remove(self, item_id: int) -> None:
-        self.transaction[item_id] -= 1
+    @property
+    def items(self) -> tuple[int]:
+        return self[1]
 
 
-    def build(self) -> Union[tuple, None]:
-        if len(self.transaction) == 0:
-            return None
-
-        add = []
-        remove = []
-        for iid, mod in self.transaction.items():
-            if mod > 0:
-                add.append(iid)
-            elif mod < 0:
-                remove.append(iid)
-
-        self.transaction.clear()
-        return InventoryUpdate(add, remove)
-
-
-    def clear(self) -> None:
-        self.transaction.clear()
+    def apply_to(self, inv: Inventory) -> None:
+        inv.clear()
+        for iid in self.items:
+            inv.add_item(iid)

@@ -11,7 +11,6 @@ from .exception import InventoryOverflowError, InventoryDeleteError
 
 class Inventory(RevertableObject):
     def __init__(self, size: int) -> None:
-        self.testflag = True
         self._size: int = size
         self._data: dict[int, int] = RevertableDict()
         self._items_qty: int = 0

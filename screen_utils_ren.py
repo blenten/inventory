@@ -1,9 +1,9 @@
 #type:ignore
 """renpy
-init 1 python early in inv_screen:
+init python early in inv_screen:
 """
 
-from renpy.store import Items, InvUpdBuilder
+from renpy.store import Items
 
 
 
@@ -29,11 +29,13 @@ def init_positions() -> list:
 class CraftArea:
 
     def __init__(self):
+        self.craft_occured = False
         self.data = {}
 
 
     def clear(self):
         self.data.clear()
+        self.craft_occured = False
 
 
     def return_drags(self):
@@ -68,15 +70,14 @@ class CraftArea:
 
         for r in self.data.keys():
             renpy.store.inventory.remove_item(r)
-            InvUpdBuilder.remove(r)
             drag_pos.remove(r, False)
         self.clear()
 
         renpy.store.inventory.add_item(res_item.id)
-        InvUpdBuilder.add(res_item.id)
-
         drag_pos.assign(res_item.id)
         drag_pos.sort_and_compress()
+
+        self.craft_occured = True
 
 
 

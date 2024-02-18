@@ -6,13 +6,9 @@ init python in inv_screen:
     def reset():
         craft_area.clear()
         drag_pos.clear()
-        InvUpdBuilder.clear()
-
 
     def return_():
-        upd = InvUpdBuilder.build()
-        return upd if upd is not None else False
-
+        return craft_area.craft_occured
 
     def item_drugged_func(dragged, dropped_on):
         global drag_pos
@@ -28,47 +24,11 @@ init python in inv_screen:
 
 screen hud():
     modal False
-
     showif renpy.get_screen("choice") is None:
         imagebutton auto inv_screen.IMG_BUTTON_HUD:
             focus_mask True
-            action Call("_show_inventory_screen", from_current=True)
+            action Function(inv_screen.show)
 
-
-
-label _show_inventory_screen:
-    hide screen hud
-    $ inv_screen.reset()
-    call screen inventory_screen
-    show screen hud
-    if isinstance(_return, inv.InventoryUpdate):
-        $ renpy.suspend_rollback(True)
-        jump _craft_occured
-        $ renpy.suspend_rollback(False)
-    return
-
-label _craft_occured:
-    python:
-        upd = _return
-
-        if (renpy.in_rollback()
-            and isinstance(renpy.roll_forward_info(), inv.InventoryUpdate)):
-
-            upd = renpy.roll_forward_info()
-
-            try:
-                for r in upd.remove:
-                    renpy.store.inventory.remove_item(r)
-
-            except inv.InventoryDeleteError:    # for rare bug
-                del renpy.game.log.forward[-1]
-                renpy.return_statement()
-
-            for a in upd.add:
-                renpy.store.inventory.add_item(a)
-
-        renpy.checkpoint(upd, hard=False)
-    return
 
 
 
