@@ -8,14 +8,6 @@ from renpy.store import Items
 
 
 @renpy.pure
-def square(side):
-    if isinstance(side, float):
-        ratio = renpy.config.screen_height / renpy.config.screen_width
-        return (side * ratio, side)
-    return (side, side)
-
-
-@renpy.pure
 def init_positions() -> list:
     delta = ITEMS_AREA_SIZE[0] / ITEMS_AREA_ROW_LEN
     result = []
