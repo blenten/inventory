@@ -1,96 +1,105 @@
-init python in inv_screen:
+init -1 python early in inventory.screen:
 
-    craft_area = CraftArea()
-    drag_pos = PosManager()
-
-    def reset():
-        craft_area.clear()
-        drag_pos.clear()
-
-    def return_():
-        return craft_area.craft_occured
-
-    def item_drugged_func(dragged, dropped_on):
-        global drag_pos
-        if dropped_on:
-            if dropped_on.drag_name == "craft_drop":
-                craft_area.add(dragged[0].drag_name)
-                return
-        dragged[0].snap(*drag_pos.get(dragged[0].drag_name))
-        craft_area.remove(dragged[0].drag_name)
+    import inventory as inv
+    from inventory import PosManager
 
 
+    @renpy.pure
+    def get_positions(area_size: tuple, row_len: int) -> tuple:
+        delta = area_size[0] / row_len
+        result = []
+        for dy in range(0, int(area_size[0] / delta)):
+            for dx in range(0, row_len):
+                result.append((int(dx * delta), int(dy * delta)))
+        return tuple(result)
 
 
-screen hud():
+    @renpy.pure
+    def get_item_drag_size(row_len: int) -> tuple:
+        side = 1.0 / row_len
+        return (side, side)
+
+
+    def show(sc_name: str) -> None:
+        if renpy.call_in_new_context("_show_inventory_screen", sc_name):
+            renpy.call(
+                "_inventory_update",
+                inv.InventoryState(renpy.store.inventory.current),
+                from_current=True
+                )
+
+
+    class Screen(renpy.python.StoreModule):
+
+        def __init__(self):
+            super().__init__(renpy.python.StoreDict())
+
+        def return_(self):
+            return False
+
+        def reset(self):
+            pass
+
+        def item_drugged_func(self, dragged, dropped_on) -> None:
+            dragged[0].snap(*(self.drag_pos.get(dragged[0].drag_name)))
+
+
+    def create(name: str, area_size: tuple, row_len: int) -> Screen:
+        res = Screen()
+        res.drag_pos = PosManager(get_positions(area_size, row_len))
+        res.drag_size = get_item_drag_size(row_len)
+        renpy.store.inventory.screen.__setattr__(name, res)
+        return res
+
+
+
+
+label _show_inventory_screen(sc_name):
+    $ inventory.screen.__dict__[sc_name].reset()
+    window hide
+    python:
+        With(Dissolve(0.15))()
+        renpy.call_screen(sc_name, _layer='screens')
+        With(Dissolve(0.25))()
+    window auto
+    $ renpy.return_statement(_return)
+
+#  For rollback
+label _inventory_update(upd):
+    $ upd.apply_to(inventory.active)
+
+
+
+
+screen hud(btn_img, sc_name):
     modal False
     showif renpy.get_screen("choice") is None:
-        imagebutton auto inv_screen.IMG_BUTTON_HUD:
+        imagebutton auto btn_img:
             focus_mask True
-            action Function(inv_screen.show)
+            action Function(inventory.screen.show, sc_name)
 
 
 
 
-screen inventory_screen():
-    modal True
-    roll_forward True
-    style_prefix "inventory"
-
-    add inv_screen.IMG_BG
-
-
-    imagebutton auto inv_screen.IMG_BUTTON_CLOSE:
-        focus_mask True
-        action Function(inv_screen.return_)
-
-
-    button:
-        style "inventory_craftbutton"
-        action Function(inv_screen.craft_area.craft)
-        hovered SetScreenVariable("craftbutton_hovered", True)
-        unhovered SetScreenVariable("craftbutton_hovered", False)
-        default craftbutton_hovered = False
-
-        if craftbutton_hovered:
-            text "CROooOFT" style "inventory_craftbutton_text":
-                outlines [(3, "#ffefc5", 0, 0)]
-                color "#000000"
-        else:
-            text "CROOFT" style "inventory_craftbutton_text"
-
-
+screen inventory_items_area(sc_name, inv):
+    $ sc = inventory.screen.__dict__[sc_name]
     draggroup:
-        id "items_draggroup"
-        style_suffix "items_area"
+        id (f"{sc_name}_items_draggroup")
+        style (f"{sc_name}_items_area")
 
-        for row in inventory.list_items(inv_screen.ITEMS_AREA_ROW_LEN):
-            for item in as_items(row):
-                drag:
-                    drag_name item.id
-                    tooltip item.description
-                    drag_offscreen True
-                    drag_raise True
-                    pos inv_screen.drag_pos.get(item.id)
-                    xysize (0.25, 0.25)
-                    dragged inv_screen.item_drugged_func
+        for item in inventory.as_items(inv.list_items()):
+            drag:
+                drag_name item.id
+                tooltip item.description
+                drag_offscreen True
+                drag_raise True
+                pos sc.drag_pos.get(item.id)
+                xysize sc.drag_size
+                dragged sc.item_drugged_func
 
-                    frame:
-                        style_suffix "item_cell"
-                        add "[item.pic]":
-                            align (0.5, 0.5)
-                            fit "contain"
-                        text "[item.name]" style "inventory_item_cell_text"
-
-        drag:
-            drag_name "craft_drop"
-            draggable False
-            droppable True
-            style "craft_area"
-
-            fixed:
-                xfill True
-                yfill True
-                # background "#00FF00"
-
-
+                frame:
+                    style (f"{sc_name}_item_cell")
+                    add "[item.pic]":
+                        align (0.5, 0.5)
+                        fit "contain"
+                    text "[item.name]" style (f"{sc_name}_item_cell_text")
