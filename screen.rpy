@@ -1,7 +1,7 @@
 init -1 python early in inventory.screen:
 
     import inventory as inv
-    from inventory import PosManager
+    from inventory.screen import Screen, PosManager
 
 
     @renpy.pure
@@ -20,8 +20,31 @@ init -1 python early in inventory.screen:
         return (side, side)
 
 
-    def show(sc_name: str) -> None:
-        if renpy.call_in_new_context("_show_inventory_screen", sc_name):
+    def create(name: str, area_size: tuple, row_len: int) -> Screen:
+        res = Screen(
+            name,
+            PosManager(get_positions(area_size, row_len)),
+            get_item_drag_size(row_len)
+            )
+        return res
+
+
+
+# /* ---------------------------------- SHOW ---------------------------------- */
+
+screen hud(btn_img, sc):
+    modal False
+    showif renpy.get_screen("choice") is None:
+        imagebutton auto btn_img:
+            focus_mask True
+            action Function(inventory.screen.show, sc)
+
+
+
+
+init -1 python early in inventory.screen:
+    def show(sc: Screen) -> None:
+        if renpy.call_in_new_context("_show_inventory_screen", sc):
             renpy.call(
                 "_inventory_update",
                 inv.InventoryState(renpy.store.inventory.current),
@@ -29,40 +52,19 @@ init -1 python early in inventory.screen:
                 )
 
 
-    class Screen(renpy.python.StoreModule):
-
-        def __init__(self):
-            super().__init__(renpy.python.StoreDict())
-
-        def return_(self):
-            return False
-
-        def reset(self):
-            pass
-
-        def item_drugged_func(self, dragged, dropped_on) -> None:
-            dragged[0].snap(*(self.drag_pos.get(dragged[0].drag_name)))
 
 
-    def create(name: str, area_size: tuple, row_len: int) -> Screen:
-        res = Screen()
-        res.drag_pos = PosManager(get_positions(area_size, row_len))
-        res.drag_size = get_item_drag_size(row_len)
-        renpy.store.inventory.screen.__setattr__(name, res)
-        return res
-
-
-
-
-label _show_inventory_screen(sc_name):
-    $ inventory.screen.__dict__[sc_name].reset()
+label _show_inventory_screen(sc):
+    $ sc.reset()
     window hide
     python:
         With(Dissolve(0.15))()
-        renpy.call_screen(sc_name, _layer='screens')
+        renpy.call_screen(sc.name, _layer='screens')
         With(Dissolve(0.25))()
     window auto
     $ renpy.return_statement(_return)
+
+
 
 #  For rollback
 label _inventory_update(upd):
@@ -70,22 +72,12 @@ label _inventory_update(upd):
 
 
 
+# /* ------------------------------- ITEMS AREA ------------------------------- */
 
-screen hud(btn_img, sc_name):
-    modal False
-    showif renpy.get_screen("choice") is None:
-        imagebutton auto btn_img:
-            focus_mask True
-            action Function(inventory.screen.show, sc_name)
-
-
-
-
-screen inventory_items_area(sc_name, inv):
-    $ sc = inventory.screen.__dict__[sc_name]
+screen inventory_items_area(sc, inv):
     draggroup:
-        id (f"{sc_name}_items_draggroup")
-        style (f"{sc_name}_items_area")
+        id (f"{sc.name}_items_draggroup")
+        style (f"{sc.name}_items_area")
 
         for item in inventory.as_items(inv.list_items()):
             drag:
@@ -95,11 +87,11 @@ screen inventory_items_area(sc_name, inv):
                 drag_raise True
                 pos sc.drag_pos.get(item.id)
                 xysize sc.drag_size
-                dragged sc.item_drugged_func
+                dragged sc.drugged_func
 
                 frame:
-                    style (f"{sc_name}_item_cell")
+                    style (f"{sc.name}_item_cell")
                     add "[item.pic]":
                         align (0.5, 0.5)
                         fit "contain"
-                    text "[item.name]" style (f"{sc_name}_item_cell_text")
+                    text "[item.name]" style (f"{sc.name}_item_cell_text")
