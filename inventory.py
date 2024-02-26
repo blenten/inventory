@@ -55,12 +55,5 @@ class Inventory(RevertableObject):
         except KeyError:
             raise InventoryDeleteError(f'No item with id: {item_id} in inventory')
 
-    def list_items(self, chunk_size: int = 1) -> Union[tuple, list]:
-        # renpy hangs and leaks memory if iter() is used. this solves the problem somehow
-        items = (iid for iid in self._data.keys())
-        if chunk_size == 1:
-            return tuple(self._data.keys())
-        result = []
-        while chunk := tuple(islice(items, chunk_size)):
-            result.append(chunk)
-        return result
+    def list_items(self) -> tuple:
+        return tuple(self._data.keys())

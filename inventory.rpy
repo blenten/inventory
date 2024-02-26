@@ -14,14 +14,6 @@ init -2 python early in inventory:
         return [Items.get(iid) for iid in iid_list]
 
 
-    @renpy.pure
-    def after_load() -> None:
-        """
-        Must ba called in the `after_load` label for correct work
-        """
-        renpy.block_rollback()
-
-
 
 
     active: inv.Inventory = None
