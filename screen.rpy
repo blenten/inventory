@@ -2,39 +2,36 @@ init -1 python early in inventory.screen:
 
     from renpy.rollback import NoRollback
     from renpy.store import Drag, DragGroup
-    from inventory.screen import Position, Size, PrSize, Craft, PosManager
+
+    from inventory import InventoryState
+    from inventory.screen import Position, Size, CraftArea, CraftCell, PosManager, Screen as ScreenData
+
+    from dataclasses import dataclass
 
 
     @renpy.pure
-    def get_positions(area_size: Size, row_len: int) -> tuple[Position]:
+    def get_positions(area_pos: Position, area_size: Size, row_len: int) -> tuple[Position]:
         delta = area_size[0] / row_len
         result = []
         for dy in range(0, int(area_size[0] / delta)):
             for dx in range(0, row_len):
-                result.append((int(dx * delta), int(dy * delta)))
+                result.append((int(area_pos[0] + dx * delta), int(area_pos[1] + dy * delta)))
         return tuple(result)
 
 
     @renpy.pure
-    def get_item_drag_sizes(area_size: Size, row_len: int) -> tuple:
-        side_pr = 1.0 / row_len
-        side = int(area_size[0] * side_pr)
-        return ((side, side), (side_pr, side_pr))
+    def get_item_drag_size(area_size: Size, row_len: int) -> Size:
+        side = int(area_size[0] / row_len)
+        return (side, side)
 
 
 # /* ------------------------------- Screen API ------------------------------- */
 
-    class Screen(NoRollback):
+    class Screen(ScreenData):
 
-        def __init__(self, name: str, area_size: Size, row_len: int, craft: Craft = None):
-
-            sizes = get_item_drag_sizes(area_size, row_len)
-
-            self.name = name
-            self.pos = PosManager(get_positions(area_size, row_len))
-            self.cell_size: Size = sizes[0]
-            self.cell_pr_size: PrSize = sizes[1]
-            self.craft = craft
+        def __init__(self, *args):
+            super().__init__(*args)
+            self.inventory_update = None
 
 
         @property
@@ -46,37 +43,104 @@ init -1 python early in inventory.screen:
             return self.dg.get_child_by_name(drag_name)
 
 
-        def return_(self) -> bool:
-            if self.craft is not None:
-                return self.craft.craft_occured
+        def return_(self):
+            if self.inventory_update:
+                return self.inventory_update
             return False
 
 
         def reset(self) -> None:
-            self.pos.clear()
-            if self.craft is not None:
-                self.craft.reset()
+            self.inventory_update = None
+            if self.pos:
+                self.pos.clear()
+            if self.craft_area :
+                self.craft_area.clear()
 
 
         def on_dragged(self, dragged, dropped_on):
             item_id = dragged[0].drag_name
+            start_cell = self.craft_area.get_cell(item_id)
+            self.craft_area.remove(item_id)
 
             if dropped_on is None:
                 dragged[0].snap(*self.pos.get(item_id))
                 return
 
             cell_name = dropped_on.drag_name
-            self.pos.remove(item_id)
 
             # if dropped not on craft cell but random droparea
-            if not (self.craft and cell_name in self.craft.cell_names):
+            if not (self.craft_area and cell_name in self.craft_area.cell_names):
                 return
 
-            popped_id = self.craft.place_item(item_id, cell_name)
+            popped_id = self.craft_area.place(item_id, cell_name)
+            dragged[0].snap(*self.craft_area.get_cell_pos(cell_name))
+
             if popped_id:
-                # sc.pos.remove(popped_id) # not needed cause it would be removed when first placed in craft cell
-                self.drag(popped_id).snap(*self.pos.get(popped_id))
-            dragged[0].snap(*self.craft.get_cell_pos(dropped_on.drag_name))
+                popped = self.drag(popped_id)
+                if start_cell:
+                    self.craft_area.place(popped_id, start_cell.name)
+                    popped.snap(*start_cell.pos)
+                    return
+                popped.snap(*self.pos.get(popped_id))
+
+
+        def craft(self, inv):
+
+            recipe = self.craft_area.get_recipe()
+            res_item_id = renpy.store.inventory.Items.recipe(recipe)
+            if res_item_id is None:
+                return
+
+            dg = self.dg
+            self.reset()
+            for iid in recipe:
+                inv.remove_item(iid)
+                dg.remove(dg.get_child_by_name(iid))
+
+            inv.add_item(res_item_id)
+            self.inventory_update = InventoryState(inv)
+
+
+
+
+
+# /* --------------------------------- Builder -------------------------------- */
+
+    class ScreenBuilder(NoRollback):
+
+        def __getstate__(self):
+            return None
+
+        def __init__(self):
+            self.reset()
+
+
+        def reset(self) -> None:
+            self.pos = None
+            self.craft = None
+            self.cell_size = (100, 100)
+
+
+        def build(self, name) -> Screen:
+            if self.craft is not None:
+                cells = (CraftCell(*c) for c in self.craft)
+                self.craft = CraftArea(cells)
+            result = Screen(name, self.pos, self.cell_size, self.craft)
+            return result
+
+
+        def items_grid(self, area_pos: Position, area_size: Size, row_len: int) -> None:
+            self.pos = PosManager(get_positions(area_pos, area_size, row_len))
+            self.cell_size = get_item_drag_size(area_size, row_len)
+
+        def cell_size(self, size: Size) -> None:
+            self.cell_size = size
+
+        def craft_cell(self, name: str, pos: Position, size: Size = None, recipe_pos: int = 0) -> None:
+            if self.craft is None or isinstance(self.craft, CraftArea):
+                self.craft = []
+            self.craft.append((name, pos, size or self.cell_size, recipe_pos))
+
 
 
 
@@ -95,15 +159,9 @@ screen hud(btn_img, sc):
 
 init -1 python early in inventory.screen:
 
-    from inventory import InventoryState
-
     def show(sc: Screen) -> None:
-        if renpy.call_in_new_context("_show_inventory_screen", sc):
-            renpy.call(
-                "_inventory_update",
-                InventoryState(renpy.store.inventory.current),
-                from_current=True
-                )
+        if res := renpy.call_in_new_context("_show_inventory_screen", sc):
+            renpy.call("_inventory_update", res, from_current=True)
 
 
 
@@ -113,27 +171,30 @@ label _show_inventory_screen(sc):
     window hide
     python:
         With(Dissolve(0.15))()
-        renpy.call_screen(sc.name, _layer='screens')
+        result = renpy.call_screen(sc.name, _layer='screens')
         With(Dissolve(0.25))()
     window auto
-    $ renpy.return_statement(_return)
+    $ renpy.return_statement(result)
 
 
 
 #  For rollback
-label _inventory_update(upd):
-    $ upd.apply_to(inventory.active)
+label _inventory_update(upd_state):
+    $ upd_state.restore()
 
 
 
 # /* ------------------------------- ITEMS AREA ------------------------------- */
 
-screen inventory_items_area(sc, inv):
+screen inventory_items(sc, inv, craft=False):
     draggroup:
         id (f"{sc.name}_items_draggroup")
         style (f"{sc.name}_items_area")
 
-        for item in inventory.as_items(inv.list_items()):
+        if craft:
+            use inventory_craft_cells(sc)
+
+        for item in [i for i in inventory.as_items(inv.list_items()) if not i.hidden]:
             drag:
                 drag_name item.id
                 tooltip item.description
@@ -141,7 +202,7 @@ screen inventory_items_area(sc, inv):
                 drag_raise True
                 droppable False
                 pos sc.pos.get(item.id)
-                xysize sc.cell_pr_size
+                xysize sc.cell_size
                 dragged sc.on_dragged
 
                 frame:
@@ -150,3 +211,20 @@ screen inventory_items_area(sc, inv):
                         align (0.5, 0.5)
                         fit "contain"
                     text "[item.name]" style (f"{sc.name}_item_cell_text")
+
+
+
+
+screen inventory_craft_cells(sc):
+
+    for cell in sc.craft_area.cells:
+        drag:
+            drag_name cell.name
+            droppable True
+            draggable False
+            drag_offscreen True
+            xysize cell.size
+            pos cell.pos
+
+            frame:
+                style (f"{sc.name}_craft_cell")
