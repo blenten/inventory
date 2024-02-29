@@ -147,7 +147,7 @@ init -1 python early in inventory.screen:
 
 # /* ---------------------------------- SHOW ---------------------------------- */
 
-screen hud(btn_img, sc):
+screen inventory_hud(btn_img, sc):
     modal False
     showif renpy.get_screen("choice") is None:
         imagebutton auto btn_img:
