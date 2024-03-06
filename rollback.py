@@ -1,16 +1,4 @@
-from typing import NewType
-
 from .inventory import Inventory
-
-
-_UpdID = NewType('_UpdID', int)
-_UPD_ID = 0
-
-
-def _upd_id() -> _UpdID:
-    global _UPD_ID
-    _UPD_ID += 1
-    return _UpdID(_UPD_ID)
 
 
 
@@ -18,12 +6,15 @@ def _upd_id() -> _UpdID:
 class InventoryState(tuple):
 
     def __new__(cls, inv: Inventory):
-        global _UPD_STORE
-        return super().__new__(cls, (_upd_id(), tuple(inv._data.keys())))
+        return super().__new__(cls, (inv, tuple(inv._data.keys())))
+
+    def __reduce__(self):
+        return (super().__new__, (InventoryState, (self[0], self[1])))
+
 
 
     @property
-    def upd_id(self) -> _UpdID:
+    def inv(self) -> Inventory:
         return self[0]
 
     @property
@@ -31,7 +22,7 @@ class InventoryState(tuple):
         return self[1]
 
 
-    def apply_to(self, inv: Inventory) -> None:
-        inv.clear()
+    def restore(self) -> None:
+        self.inv.clear()
         for iid in self.items:
-            inv.add_item(iid)
+            self.inv.add_item(iid)
