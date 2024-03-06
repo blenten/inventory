@@ -52,5 +52,5 @@ class Inventory(RevertableObject):
         except KeyError:
             raise InventoryDeleteError(f'No item with id: {item_id} in inventory')
 
-    def list_items(self) -> tuple:
-        return tuple(self._data.keys())
+    def list_items(self) -> list:
+        return list(self._data.keys())

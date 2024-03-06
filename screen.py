@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional, Iterable
 
-from .item import ItemId
+from .item import ItemId, NULL_ID
+from .inventory import Inventory
 
 
 
@@ -135,6 +136,35 @@ class PosManager:
 
 
 
+@dataclass(frozen=True)
+class ItemSlot:
+    item_id: ItemId
+    pic: str
+    shadow: str
+
+    def get_pic(self, inv: Inventory) -> str:
+        if inv.has_item(self.item_id):
+            return self.pic
+        return self.shadow
+
+
+
+class ItemSlots:
+
+    def __init__(self, slots: Iterable[ItemSlot], default_pic: str) -> None:
+        self._slots = tuple(slots)
+        self._default = ItemSlot(NULL_ID, default_pic, default_pic)
+        self.active: ItemSlot = self._default
+
+
+    def get_slots(self) -> tuple[ItemSlot]:
+        return self._slots
+
+    def reset(self) -> None:
+        self.active: ItemSlot = self._default
+
+
+
 
 @dataclass(frozen=True)
 class Screen:
@@ -142,4 +172,5 @@ class Screen:
     pos: PosManager = None
     cell_size: Size = (100,100)
     craft_area: CraftArea = None
+    slots: ItemSlots = None
 
