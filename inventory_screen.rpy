@@ -3,10 +3,13 @@ init -1 python early in inventory.screen:
     from renpy.rollback import NoRollback
     from renpy.store import Drag, DragGroup
 
-    from inventory import InventoryState
-    from inventory.screen import Position, Size, CraftArea, CraftCell, PosManager, Screen as ScreenData
+    from inventory import InventoryState, ItemId
+    from inventory.screen import Screen as ScreenData, Position, Size, CraftArea,CraftCell, PosManager, ItemSlot, ItemSlots
 
     from dataclasses import dataclass
+
+    Items = renpy.store.inventory.Items
+    as_items = renpy.store.inventory.as_items
 
 
     @renpy.pure
@@ -55,6 +58,8 @@ init -1 python early in inventory.screen:
                 self.pos.clear()
             if self.craft_area :
                 self.craft_area.clear()
+            if self. slots:
+                self.slots.reset()
 
 
         def on_dragged(self, dragged, dropped_on):
@@ -87,7 +92,7 @@ init -1 python early in inventory.screen:
         def craft(self, inv):
 
             recipe = self.craft_area.get_recipe()
-            res_item_id = renpy.store.inventory.Items.recipe(recipe)
+            res_item_id = Items.recipe(recipe)
             if res_item_id is None:
                 return
 
@@ -99,6 +104,11 @@ init -1 python early in inventory.screen:
 
             inv.add_item(res_item_id)
             self.inventory_update = InventoryState(inv)
+
+
+        def slot_clicked(self, slot, inv):
+            if inv.has_item(slot.item_id):
+                self.slots.active = slot
 
 
 
@@ -117,15 +127,16 @@ init -1 python early in inventory.screen:
 
         def reset(self) -> None:
             self.pos = None
-            self.craft = None
             self.cell_size = (100, 100)
+            self.craft = None
+            self.slots = None
 
 
         def build(self, name) -> Screen:
             if self.craft is not None:
                 cells = (CraftCell(*c) for c in self.craft)
                 self.craft = CraftArea(cells)
-            result = Screen(name, self.pos, self.cell_size, self.craft)
+            result = Screen(name, self.pos, self.cell_size, self.craft, self.slots)
             return result
 
 
@@ -142,6 +153,13 @@ init -1 python early in inventory.screen:
             self.craft.append((name, pos, size or self.cell_size, recipe_pos))
 
 
+        def item_slots(self, item_ids: list[ItemId], default_pic: str) -> None:
+            self.slots = ItemSlots(
+                (ItemSlot(i.id, i.pic, i.shadow_pic or default_pic) for i in as_items(item_ids)),
+                default_pic
+                )
+
+
 
 
 
@@ -153,6 +171,7 @@ screen inventory_hud(btn_img, sc):
         imagebutton auto btn_img:
             focus_mask True
             action Function(inventory.screen.show, sc)
+        key "inventory" action Function(inventory.screen.show, sc)
 
 
 
@@ -169,6 +188,8 @@ init -1 python early in inventory.screen:
 label _show_inventory_screen(sc):
     $ sc.reset()
     window hide
+    show layer master:
+        blur 10
     python:
         With(Dissolve(0.15))()
         result = renpy.call_screen(sc.name, _layer='screens')
@@ -192,7 +213,7 @@ screen inventory_items(sc, inv, craft=False):
         style (f"{sc.name}_items_area")
 
         if craft:
-            use inventory_craft_cells(sc)
+            use _inventory_craft_cells(sc)
 
         for item in [i for i in inventory.as_items(inv.list_items()) if not i.hidden]:
             drag:
@@ -215,7 +236,7 @@ screen inventory_items(sc, inv, craft=False):
 
 
 
-screen inventory_craft_cells(sc):
+screen _inventory_craft_cells(sc):
 
     for cell in sc.craft_area.cells:
         drag:
@@ -228,3 +249,34 @@ screen inventory_craft_cells(sc):
 
             frame:
                 style (f"{sc.name}_craft_cell")
+
+
+
+
+screen inventory_item_slots(sc, inv):
+
+    vpgrid:
+        style (f"{sc.name}_items_area")
+        mousewheel True
+        cols 1
+        spacing 0
+
+        for s in sc.slots.get_slots():
+            button:
+                style (f"{sc.name}_item_cell")
+                action Function(sc.slot_clicked, s, inv)
+
+                add "[s.get_pic(inv)]":
+                    align (0.5, 0.5)
+                    fit "contain"
+
+    frame:
+        style (f"{sc.name}_active_item_area")
+        frame:
+            style (f"{sc.name}_active_item_cell")
+            add "[sc.slots.active.get_pic(inv)]":
+                align (0.5, 0.5)
+                fit "contain"
+
+        text "[inventory.Items.name(sc.slots.active.item_id)]" style (f"{sc.name}_active_item_name")
+        text "[inventory.Items.description(sc.slots.active.item_id)]" style (f"{sc.name}_active_item_description")

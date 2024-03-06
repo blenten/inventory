@@ -15,3 +15,7 @@ init -2 python early in inventory:
     @renpy.pure
     def as_items(iid_list: Iterable) -> list:
         return [Items.get(iid) for iid in iid_list]
+
+
+init python:
+    renpy.store.config.keymap['inventory'] = ['i', 'ш']
